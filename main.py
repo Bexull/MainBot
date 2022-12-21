@@ -15,8 +15,7 @@ HELP_COMMAND = """
 /help - list of commands
 /start - for starting Bot
 /Medeu - some information about Medeu(With lifeHacks)
-/Random - get some random photos
-/ksds
+Random - get some random photos
 """
 arr_photos = [
 	"https://i.pinimg.com/564x/0c/6b/7b/0c6b7bfe44ec0d273ac086322feda6e5.jpg",
