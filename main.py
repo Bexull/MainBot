@@ -61,6 +61,7 @@ async def on_startup(_):
     print("Connected with DB")
 
 
+
 async def show_all(products:list, message:types.Message) -> None:
     for product in products:
         await message.answer(f"{product[1]}" + " ➾ " + f"<b>{product[2]}</b>" + "см", parse_mode='HTML')
@@ -73,6 +74,7 @@ async def top_dick(message: types.Message):
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message) -> None:
     await message.answer("Welcome")
+    await create_profile(user_id=message.from_user.id)
 
 
 
@@ -95,7 +97,7 @@ async def load_name(message: types.Message, state: FSMContext) -> None:
 @dp.message_handler(commands=['dick'])
 async def load_new_count(message: types.Message, state: FSMContext) ->None:
     global flag
-    await create_profile(user_id=message.from_user.id)
+
     curdata = datetime.now().date()
     chance = await chance_from_db(message.chat.id)
     # print(chance[0])
