@@ -1,21 +1,33 @@
 import random
 import aiogram
 
+from aiogram.dispatcher.filters.state import StatesGroup,State
 from aiogram import Bot, Dispatcher, executor, types,exceptions
 from aiogram.dispatcher.filters import Text
 from config import TOKEN_API
 import Keyboard
 from Keyboard import keyboard, ikb, inkk, kb, ikb2 , kb_medeu, ink_medeu, ink_medeu2, \
 	ink_session_workingDays, Nextink
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import FSMContext
+from sqlite import *
+from datetime import datetime
 
+flag = False
+storage = MemoryStorage()
 bot = Bot(TOKEN_API)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=MemoryStorage())
+
+
 
 HELP_COMMAND = """
 /help - list of commands
 /start - for starting Bot
 /Medeu - some information about Medeu(With lifeHacks)
-Random - get some random photos
+/Random - get some random photos
+/log - log in
+/dick - grow dick
+/top_dick - top rang
 """
 arr_photos = [
 	"https://i.pinimg.com/564x/0c/6b/7b/0c6b7bfe44ec0d273ac086322feda6e5.jpg",
@@ -40,8 +52,70 @@ lifehack_photos = dict(zip(arr_photos_lifehacks,["Приходи в хороше
 												 "Перед тем как завязывать лучше оборачивать шнурок трижды, так он будет лучше держать шнуровку",
 												 "Надевайте чехол на коньки, если вы хотите куда либо сходить, например в уборную. Это вам сэкономит время, коньки не придется снимать,также вы продлите жизнь лезвию конька."]))
 random_photo_lifehack = random.choice(list(lifehack_photos.keys()))
+
+class ProfileStateGroup(StatesGroup):
+    name = State()
+    new_count = State()
+async def on_startup(_):
+    await db_start()
+    print("Connected with DB")
+
+
+async def show_all(products:list, message:types.Message) -> None:
+    for product in products:
+        await message.answer(f"{product[1]}" + " ➾ " + f"<b>{product[2]}</b>" + "см", parse_mode='HTML')
+
+@dp.message_handler(commands=['top_dick'])
+async def top_dick(message: types.Message):
+    all = await get_all()
+    await show_all(all, message)
+
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message) -> None:
+    await message.answer("Welcome")
+    await create_profile(user_id=message.from_user.id)
+
+
+
+@dp.message_handler(commands=['log'])
+async def cmd_create(message: types.Message, state: FSMContext) -> None:
+    await message.answer("Пришли мне свой ник!")
+    await ProfileStateGroup.name.set()
+
+
+@dp.message_handler(state=ProfileStateGroup.name)
+async def load_name(message: types.Message, state: FSMContext) -> None:
+    async with state.proxy() as data:
+        data['name'] = message.text
+    await edit_profile(state, user_id=message.from_user.id)
+    await message.reply("Completed!")
+    await ProfileStateGroup.next()
+    await state.finish()
+
+@dp.message_handler(commands=['dick'])
+async def load_new_count(message: types.Message, state: FSMContext) ->None:
+    global flag
+    curdata = datetime.now().date()
+    if flag == False:
+        rand = random.randint(-10,10)
+        async with state.proxy() as data:
+            await new_count(rand, message.chat.id)
+        name = await name_from_db(message.chat.id)
+        count = await count_from_db(message.chat.id)
+        await message.answer(str(name[0]) + " your dick has grown: " + str(rand) + "\n" + " it's now equal to: " + str(count[0]))
+        flag = True
+        if curdata == datetime.now().date():
+            pass
+        else:
+            flag = False
+
+    else:
+        await message.answer("Сегодня ты уже играл! Следующая попытка завтра!")
+
 async def on_startup(_):
 	print('Bot was successfully started!')
+	await db_start()
+	print("Connected with DB")
 
 async def send_random(message: types.Message):
 	randomPhoto = random.choice(list(photos.keys()))
@@ -100,7 +174,7 @@ async def random_photo(message: types.Message):
 						 reply_markup=kb)
 
 
-@dp.message_handler(Text(equals="Random"))
+@dp.message_handler(Text(equals="/Random"))
 async def SendRandomPhoto(message: types.Message):
 	await send_random(message)
 
@@ -129,16 +203,19 @@ async def callbackall(callback: types.CallbackQuery):
 		await callback.message.answer(text="Выберите сеасн:", reply_markup=ink_session_workingDays)
 	if callback.data == "session1_workingDays":
 		await callback.answer("🤍")
-		await callback.message.answer(text="Soon...")
+		await callback.message.answer(text="10:00 - 12:30:\n"
+									  "Взрослый билет(23+) - 1000тг\n"
+									  "Молодежный билет(14-22) - 600тг\n"
+									  "Детский билет(7-13) - 500тг")
 	if callback.data == "session2_workingDays":
 		await callback.answer("💛")
-		await callback.message.answer(text="10:00 - 12:30:\n"
+		await callback.message.answer(text="13:30 - 16:30:\n"
 										   "Взрослый билет(23+) - 2000тг\n"
 											"Молодежный билет(14-22) - 1200тг\n"
 											"Детский билет(7-13) - 500тг",parse_mode="HTML")
 	if callback.data == "session3_workingDays":
 		await callback.answer("🤍")
-		await callback.message.answer(text="13:30 - 16:30:\n"
+		await callback.message.answer(text="19:00 - 23:00:\n"
 										   "Взрослый билет(23+) - 2500тг\n"
 											"Молодежный билет(14-22) - 1500тг\n"
  											"Детский билет(7-13) - 500тг")
@@ -152,9 +229,6 @@ async def callbackall(callback: types.CallbackQuery):
 async def send_emoji(message: types.Message):
 	if message.text == "thx":
 		await message.reply("💗")
-
-
-
 
 if __name__ == "__main__" :
 	executor.start_polling(dp, skip_updates=True, on_startup=on_startup)

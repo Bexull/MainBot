@@ -4,8 +4,8 @@ keyboard = ReplyKeyboardMarkup(resize_keyboard=True,
 							   one_time_keyboard=False) #скрывает клаву после нажатия
 b_help = KeyboardButton('/help')
 b_start = KeyboardButton('/Medeu')
-b_location = KeyboardButton('/Random')
-b_picture = KeyboardButton('/picture')
+b_location = KeyboardButton('/dick')
+b_picture = KeyboardButton('/top_dick')
 keyboard.add(b_help).insert(b_start).add(b_location).insert(b_picture)
 
 inkk = InlineKeyboardMarkup(row_width=2)
@@ -51,6 +51,12 @@ sb1 = InlineKeyboardButton(text="10:00 - 12:30",callback_data="session1_workingD
 sb2 = InlineKeyboardButton(text="13:30 - 16:30",callback_data="session2_workingDays")
 sb3 = InlineKeyboardButton(text="19:00 - 23:00",callback_data="session3_workingDays")
 ink_session_workingDays.add(sb1,sb2).add(sb3)
+
+ink_session_daysOff = InlineKeyboardMarkup(row_width=2)
+sb1_off = InlineKeyboardButton(text="10:00 - 12:30",callback_data="session1_workingDays")
+sb2_off = InlineKeyboardButton(text="13:30 - 16:30",callback_data="session2_workingDays")
+sb3_off = InlineKeyboardButton(text="19:00 - 23:00",callback_data="session3_workingDays")
+ink_session_daysOff.add(sb1_off,sb2_off).add(sb3_off)
 
 
 kb = ReplyKeyboardMarkup(resize_keyboard=True)
