@@ -86,7 +86,7 @@ async def cmd_start(message: types.Message) -> None:
 
 @dp.message_handler(commands=['log'])
 async def cmd_create(message: types.Message, state: FSMContext) -> None:
-    await message.answer("Пришли мне свой ник!")
+    await message.answer("Отправь мне свой ник!")
     await ProfileStateGroup.name.set()
 
 
