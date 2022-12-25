@@ -40,7 +40,10 @@ async def chance_from_db(id):
     chance = cur.execute("SElECT chance FROM profile WHERE user_id = ?", (id, )).fetchone()
     return chance
 async def chance_set(id):
-    newchance = cur.execute("UPDATE profile SET chance = ? WHERE user_id = ?", (1, id,)).fetchone()
+    newchance = cur.execute("UPDATE profile SET chance = ? WHERE user_id = ?", (11, id,)).fetchone()
+    return newchance
+async def chance_set_zero(id):
+    newchance = cur.execute("UPDATE profile SET chance = ? WHERE user_id = ?", (0, id,)).fetchone()
     return newchance
 
 async def get_all():

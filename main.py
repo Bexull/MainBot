@@ -56,6 +56,7 @@ random_photo_lifehack = random.choice(list(lifehack_photos.keys()))
 class ProfileStateGroup(StatesGroup):
     name = State()
     new_count = State()
+    count = State()
 async def on_startup(_):
     await db_start()
     print("Connected with DB")
@@ -65,6 +66,10 @@ async def on_startup(_):
 async def show_all(products:list, message:types.Message) -> None:
     for product in products:
         await message.answer(f"{product[1]}" + " ➾ " + f"<b>{product[2]}</b>" + "см", parse_mode='HTML')
+
+async def show_count(products: list, message: types.Message):
+    for product in products:
+        await bot.send_message(chat_id=message.chat.id,text=f"{product[2]}")
 
 @dp.message_handler(commands=['top_dick'])
 async def top_dick(message: types.Message):
@@ -93,26 +98,32 @@ async def load_name(message: types.Message, state: FSMContext) -> None:
     await message.reply("Completed!")
     await ProfileStateGroup.next()
     await state.finish()
-
 @dp.message_handler(commands=['dick'])
 async def load_new_count(message: types.Message, state: FSMContext) ->None:
     global flag
 
     curdata = datetime.now().date()
-    chance = await chance_from_db(message.chat.id)
-    # print(chance[0])
+    chance = await chance_from_db(message.from_user.id)
+    print(chance[0])
+    global counter
+
     if chance[0] == 0:
-        rand = random.randint(-10,10)
+        await chance_set(message.from_user.id)
+        rand = random.randint(-20,30)
         async with state.proxy() as data:
-            await new_count(rand, message.chat.id)
-        name = await name_from_db(message.chat.id)
-        count = await count_from_db(message.chat.id)
-        await message.answer(str(name[0]) + " your dick has grown: " + str(rand) + "\n" + " it's now equal to: " + str(count[0]))
-        await chance_set(message.chat.id)
+            await new_count(rand, message.from_user.id)
+        name = await name_from_db(message.from_user.id)
+        count = await count_from_db(message.from_user.id)
+        await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]))
+        print(chance[0])
+
     else:
-        await message.answer("Сегодня Ты уже играл! Следующая попытка завтра!")
+        await message.answer("Ты уже играл! Следующая попытка завтра!")
+
     if curdata != datetime.now().date():
-        chance[0] = 0
+        await chance_set_zero(message.from_user.id)
+    alluser = await get_all_user(message.from_user.id)
+    await show_all(alluser, message)
 
 async def on_startup(_):
     print('Bot was successfully started!')
