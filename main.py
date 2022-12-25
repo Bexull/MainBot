@@ -108,7 +108,7 @@ async def load_new_count(message: types.Message, state: FSMContext) ->None:
         await message.answer(str(name[0]) + " your dick has grown: " + str(rand) + "\n" + " it's now equal to: " + str(count[0]))
         await chance_set(message.chat.id)
     else:
-        await message.answer("Сегодня ты уже играл! Следующая попытка завтра!")
+        await message.answer("Сегодня Ты уже играл! Следующая попытка завтра!")
     if curdata != datetime.now().date():
         chance[0] = 0
 
