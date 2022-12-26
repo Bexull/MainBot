@@ -5,14 +5,14 @@ async def db_start():
     db = sq.connect("main.db")
     cur = db.cursor()
 
-    cur.execute("CREATE TABLE IF NOT EXISTS profile(user_id TEXT PRIMARY KEY, name TEXT, count INTEGER, chance INTEGER, id INTEGER, LastData TEXT, DateNow TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS profile(user_id TEXT PRIMARY KEY, name TEXT, count INTEGER, chance INTEGER, id INTEGER, LastData TEXT, DateNow TEXT, username TEXT)")
 
     db.commit()
 
 async def create_profile(user_id):
     user = cur.execute("SELECT 1 FROM profile WHERE user_id == '{key}'".format(key=user_id)).fetchone()
     if not user:
-        cur.execute("INSERT INTO profile VALUES(?, ?, ?, ?, ?, ?, ?)", (user_id, '', '', 0, '', '', ''))
+        cur.execute("INSERT INTO profile VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (user_id, '', '', 0, '', '', '',''))
         db.commit()
 
 async def edit_profile(state, user_id):
@@ -80,3 +80,10 @@ async def get_id(id):
 async def get_all_user(id):
     all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count DESC) AS id , * FROM profile WHERE user_id = ?", (id,)).fetchall()
     return all
+async def set_username(username,id):
+    cur.execute("UPDATE profile SET username = ? WHERE user_id = ?", (username,id,))
+    db.commit()
+
+async def get_username():
+    username = cur.execute("SElECT username FROM profile ").fetchall()
+    return username

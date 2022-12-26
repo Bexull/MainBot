@@ -153,6 +153,7 @@ async def top_dick(message: types.Message):
 @dp.message_handler(commands=['log'])
 async def logging(message: types.Message, state: FSMContext) -> None:
     await message.answer("Пришли мне свой ник!")
+    await set_username('@' + str(message.from_user.username), message.from_user.id)
     await ProfileStateGroup.name.set()
 
 @dp.message_handler(state=ProfileStateGroup.name)
@@ -161,13 +162,21 @@ async def load_name(message: types.Message, state: FSMContext) -> None:
         data['name'] = message.text
     await edit_profile(state, user_id=message.from_user.id)
     await message.reply("Completed!")
-    await ProfileStateGroup.next()
     await state.finish()
 
 @dp.message_handler(commands=['help'])
 async def help(message:types.Message):
     await message.answer(HELP_COMMAND)
-
+@dp.message_handler(commands=['all'])
+async def all(message: types.Message):
+    all = await get_username()
+    mall = all.__str__().replace('[','')
+    m1all = mall.replace(']','')
+    m2all = m1all.replace(',',' ')
+    m3all = m2all.replace('(','')
+    m4all = m3all.replace(')','')
+    m5all = m4all.replace("'",'')
+    await message.answer(m5all)
 @dp.message_handler(commands=['Medeu'])
 async def Medeu(message:types.Message):
     await message.answer(text="Medeu",reply_markup=kb_medeu)
