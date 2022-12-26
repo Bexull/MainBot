@@ -12,7 +12,7 @@ async def db_start():
 async def create_profile(user_id):
     user = cur.execute("SELECT 1 FROM profile WHERE user_id == '{key}'".format(key=user_id)).fetchone()
     if not user:
-        cur.execute("INSERT INTO profile VALUES(?, ?, ?, ?, ?, ?, ?)", (user_id, '', '', '', '', '', ''))
+        cur.execute("INSERT INTO profile VALUES(?, ?, ?, ?, ?, ?, ?)", (user_id, '', '', 0, '', '', ''))
         db.commit()
 
 async def edit_profile(state, user_id):

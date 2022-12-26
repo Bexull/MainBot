@@ -14,7 +14,8 @@ from sqlite import *
 from datetime import datetime
 
 
-flag = Falsestorage = MemoryStorage()
+flag = False
+storage = MemoryStorage()
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot, storage=MemoryStorage())
 ADMIN_ID = 1015079692
