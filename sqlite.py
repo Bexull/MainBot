@@ -42,7 +42,12 @@ async def get_last_data(id):
 async def set_last_data(last_data,id):
     cur.execute("UPDATE profile SET LastData = ? WHERE user_id = ?", (last_data, id,))
     db.commit()
-
+async def set_id(num,id):
+    cur.execute("UPDATE profile SET id = ? WHERE user_id = ?", (num, id,))
+    db.commit()
+async def get_id(id):
+    id = cur.execute("SELECT id FROM profile WHERE user_id = ?", (id,))
+    return id
 async def set_data_now(data_now):
     cur.execute("UPDATE profile SET DateNow = ?", (data_now,))
     db.commit()
@@ -63,7 +68,7 @@ async def chance_set_zero(id):
     db.commit()
 
 async def get_all():
-    all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count ASC) AS id , * FROM profile").fetchall()
+    all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count DESC) AS id , * FROM profile").fetchall()
     return all
 
 async def com(user_id):

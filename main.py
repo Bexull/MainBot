@@ -129,10 +129,12 @@ async def show_now_data(message: types.Message):
 async def show_all(products:list, message:types.Message) -> None:
     for product in products:
         await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Занимает в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
+        await set_id(product[0], message.from_user.id)
 
 async def show_all_user(products:list, message:types.Message) -> None:
+    id = await get_id(message.from_user.id)
     for product in products:
-        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Ты занимаешь в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
+        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Ты занимаешь в топе " + f"{id[0]}" + " место!", parse_mode='HTML')
 
 
 async def show_count(products: list, message: types.Message):
