@@ -13,11 +13,11 @@ from aiogram.dispatcher import FSMContext
 from sqlite import *
 from datetime import datetime
 
-flag = False
-storage = MemoryStorage()
+
+flag = Falsestorage = MemoryStorage()
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot, storage=MemoryStorage())
-
+ADMIN_ID = 1015079692
 
 
 HELP_COMMAND = """
@@ -28,6 +28,8 @@ HELP_COMMAND = """
 /log - log in
 /dick - grow dick
 /top_dick - top rang
+/show_last_data_play - Last data
+/show_current_data - Current data
 """
 arr_photos = [
     "https://i.pinimg.com/564x/0c/6b/7b/0c6b7bfe44ec0d273ac086322feda6e5.jpg",
@@ -55,17 +57,82 @@ random_photo_lifehack = random.choice(list(lifehack_photos.keys()))
 
 class ProfileStateGroup(StatesGroup):
     name = State()
-    new_count = State()
-    count = State()
+
+
+
 async def on_startup(_):
+    print('Bot was successfully started!')
     await db_start()
     print("Connected with DB")
 
 
+async def send_random(message: types.Message):
+    randomPhoto = random.choice(list(photos.keys()))
+    await bot.send_photo(message.chat.id,
+                         photo=randomPhoto,
+                         caption=photos[randomPhoto],
+                         reply_markup=ikb2)
 
+
+
+@dp.message_handler(commands=['start'])
+async def start_cm(message:types.Message):
+    await message.answer('<em>Wellcome to our Telegram Bot!</em>',
+                         parse_mode="HTML",
+                         reply_markup=keyboard)
+    await create_profile(user_id=message.from_user.id)
+    await set_data_now(datetime.now().day)
+
+
+
+@dp.message_handler(commands=['admin'])
+async def admin(message: types.Message):
+    user_id = await get_user_id(message.from_user.id)
+    if user_id[0] == '1015079692':
+        all = await get_all()
+        await message.answer(all)
+    else:
+        "Ты не админ..."
+@dp.message_handler(commands=['dick'])
+async def load_new_count(message: types.Message) ->None:
+    await set_last_data(datetime.now().day, message.from_user.id)
+
+    chance = await chance_from_db(message.from_user.id)
+    print(chance[0])
+
+    if chance[0] == 0:
+        rand = random.randint(-20,30)
+        await new_count(rand, message.from_user.id)
+        name = await name_from_db(message.from_user.id)
+        count = await count_from_db(message.from_user.id)
+        await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]))
+        await chance_set(message.from_user.id)
+        await chance_set(message.chat.id)
+    if chance[0] != 0:
+        await message.answer("Ты уже играл! Следующая попытка завтра!")
+
+    curdata = await get_last_data(message.from_user.id)
+    nowdata = await get_now_date()
+    if curdata != nowdata:
+        await chance_set_zero(message.from_user.id)
+    alluser = await get_all_user(message.from_user.id)
+    await show_all_user(alluser, message)
+@dp.message_handler(commands='show_last_data_play')
+async def show_last_data(message: types.Message):
+    last = await get_last_data(message.from_user.id)
+    await message.answer("В последний раз ты играл " + str(last[0]) + " этого месяца")
+@dp.message_handler(commands='show_current_data')
+async def show_now_data(message: types.Message):
+    now = await get_now_date()
+    await message.answer("Сегодня " + str(now[0]) + " день этого месяца")
 async def show_all(products:list, message:types.Message) -> None:
     for product in products:
-        await message.answer(f"{product[1]}" + " ➾ " + f"<b>{product[2]}</b>" + "см", parse_mode='HTML')
+        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Занимает в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
+
+async def show_all_user(products:list, message:types.Message) -> None:
+    for product in products:
+        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Ты занимаешь в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
+
 
 async def show_count(products: list, message: types.Message):
     for product in products:
@@ -76,19 +143,14 @@ async def top_dick(message: types.Message):
     all = await get_all()
     await show_all(all, message)
 
-@dp.message_handler(commands=['start'])
-async def cmd_start(message: types.Message) -> None:
-    await message.answer("Welcome")
-    await create_profile(user_id=message.from_user.id)
 
 
 
 
 @dp.message_handler(commands=['log'])
-async def cmd_create(message: types.Message, state: FSMContext) -> None:
-    await message.answer("Отправь мне свой ник!")
+async def logging(message: types.Message, state: FSMContext) -> None:
+    await message.answer("Пришли мне свой ник!")
     await ProfileStateGroup.name.set()
-
 
 @dp.message_handler(state=ProfileStateGroup.name)
 async def load_name(message: types.Message, state: FSMContext) -> None:
@@ -98,51 +160,6 @@ async def load_name(message: types.Message, state: FSMContext) -> None:
     await message.reply("Completed!")
     await ProfileStateGroup.next()
     await state.finish()
-@dp.message_handler(commands=['dick'])
-async def load_new_count(message: types.Message, state: FSMContext) ->None:
-    global flag
-
-    curdata = datetime.now().date()
-    chance = await chance_from_db(message.from_user.id)
-    print(chance[0])
-    global counter
-
-    if chance[0] == 0:
-        await chance_set(message.from_user.id)
-        rand = random.randint(-20,30)
-        async with state.proxy() as data:
-            await new_count(rand, message.from_user.id)
-        name = await name_from_db(message.from_user.id)
-        count = await count_from_db(message.from_user.id)
-        await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]))
-        print(chance[0])
-
-    else:
-        await message.answer("Ты уже играл! Следующая попытка завтра!")
-
-    if curdata != datetime.now().date():
-        await chance_set_zero(message.from_user.id)
-    alluser = await get_all_user(message.from_user.id)
-    await show_all(alluser, message)
-
-async def on_startup(_):
-    print('Bot was successfully started!')
-    await db_start()
-    print("Connected with DB")
-
-async def send_random(message: types.Message):
-    randomPhoto = random.choice(list(photos.keys()))
-    await bot.send_photo(message.chat.id,
-                         photo=randomPhoto,
-                         caption=photos[randomPhoto],
-                         reply_markup=ikb2)
-
-
-@dp.message_handler(commands=['start'])
-async def start_cm(message:types.Message):
-    await message.answer('<em>Wellcome to our Telegram Bot!</em>',
-                         parse_mode="HTML",
-                         reply_markup=keyboard)
 
 @dp.message_handler(commands=['help'])
 async def help(message:types.Message):
