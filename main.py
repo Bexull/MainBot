@@ -14,12 +14,12 @@ from sqlite import *
 from datetime import datetime
 
 
+
 flag = False
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot, storage=MemoryStorage())
 ADMIN_ID = 1015079692
-
 
 HELP_COMMAND = """
 /help - list of commands
@@ -98,7 +98,7 @@ async def admin(message: types.Message):
         "Ты не админ..."
 @dp.message_handler(commands=['dick'])
 async def load_new_count(message: types.Message) ->None:
-    await set_data_now(datetime.now().day)
+    await set_data_now(datetime.now().date())
     lastdata_user = await get_last_data(message.from_user.id)
     nowdata = await get_now_date()
     if lastdata_user != nowdata:
@@ -112,7 +112,7 @@ async def load_new_count(message: types.Message) ->None:
         await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]))
         await chance_set(message.from_user.id)
         await chance_set(message.chat.id)
-        await set_last_data(datetime.now().day, message.from_user.id)
+        await set_last_data(datetime.now().date(), message.from_user.id)
     else:
         await message.answer("Ты уже играл! Следующая попытка завтра!")
 
