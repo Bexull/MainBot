@@ -12,7 +12,7 @@ async def db_start():
 async def create_profile(user_id):
     user = cur.execute("SELECT 1 FROM profile WHERE user_id == '{key}'".format(key=user_id)).fetchone()
     if not user:
-        cur.execute("INSERT INTO profile VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (user_id, '', '', 0, '', '', '',''))
+        cur.execute("INSERT INTO profile VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (user_id, '', '', '', '', '', '', ''))
         db.commit()
 
 async def edit_profile(state, user_id):
@@ -42,18 +42,22 @@ async def get_last_data(id):
 async def set_last_data(last_data,id):
     cur.execute("UPDATE profile SET LastData = ? WHERE user_id = ?", (last_data, id,))
     db.commit()
-async def set_id(num,id):
-    cur.execute("UPDATE profile SET id = ? WHERE user_id = ?", (num, id,))
+
+async def set_username(username,id):
+    cur.execute("UPDATE profile SET username = ? WHERE user_id = ?", (username,id,))
     db.commit()
-async def get_id(id):
-    id = cur.execute("SELECT id FROM profile WHERE user_id = ?", (id,))
-    return id
+
+async def get_username():
+    username = cur.execute("SElECT username FROM profile ").fetchall()
+    return username
+
 async def set_data_now(data_now):
     cur.execute("UPDATE profile SET DateNow = ?", (data_now,))
     db.commit()
 async def get_now_date():
-    lastdata = cur.execute("SELECT LastData FROM profile", ).fetchone()
-    return lastdata
+    lol = cur.execute("SELECT DateNow FROM profile ").fetchone()
+    return lol
+
 async def get_user_id(id):
     user_id = cur.execute("SElECT user_id FROM profile WHERE user_id = ?", (id, )).fetchone()
     return user_id
@@ -68,7 +72,7 @@ async def chance_set_zero(id):
     db.commit()
 
 async def get_all():
-    all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count DESC) AS id , * FROM profile").fetchall()
+    all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count ASC) AS id , * FROM profile").fetchall()
     return all
 
 async def com(user_id):
@@ -80,10 +84,3 @@ async def get_id(id):
 async def get_all_user(id):
     all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count DESC) AS id , * FROM profile WHERE user_id = ?", (id,)).fetchall()
     return all
-async def set_username(username,id):
-    cur.execute("UPDATE profile SET username = ? WHERE user_id = ?", (username,id,))
-    db.commit()
-
-async def get_username():
-    username = cur.execute("SElECT username FROM profile ").fetchall()
-    return username

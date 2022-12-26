@@ -31,6 +31,8 @@ HELP_COMMAND = """
 /top_dick - top rang
 /show_last_data_play - Last data
 /show_current_data - Current data
+/all - calls everyone
+/admin - if you admin
 """
 arr_photos = [
     "https://i.pinimg.com/564x/0c/6b/7b/0c6b7bfe44ec0d273ac086322feda6e5.jpg",
@@ -96,11 +98,7 @@ async def admin(message: types.Message):
         "Ты не админ..."
 @dp.message_handler(commands=['dick'])
 async def load_new_count(message: types.Message) ->None:
-    await set_last_data(datetime.now().day, message.from_user.id)
-
     chance = await chance_from_db(message.from_user.id)
-    print(chance[0])
-
     if chance[0] == 0:
         rand = random.randint(-20,30)
         await new_count(rand, message.from_user.id)
@@ -109,12 +107,15 @@ async def load_new_count(message: types.Message) ->None:
         await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]))
         await chance_set(message.from_user.id)
         await chance_set(message.chat.id)
-    if chance[0] != 0:
+        await set_last_data(datetime.now().day, message.from_user.id)
+    else:
         await message.answer("Ты уже играл! Следующая попытка завтра!")
 
-    curdata = await get_last_data(message.from_user.id)
+    lastdata_user = await get_last_data(message.from_user.id)
+    print(lastdata_user)
     nowdata = await get_now_date()
-    if curdata != nowdata:
+    print(nowdata)
+    if lastdata_user != nowdata:
         await chance_set_zero(message.from_user.id)
     alluser = await get_all_user(message.from_user.id)
     await show_all_user(alluser, message)
@@ -219,6 +220,14 @@ async def random_photo(message: types.Message):
 @dp.message_handler(Text(equals="/Random"))
 async def SendRandomPhoto(message: types.Message):
     await send_random(message)
+
+@dp.message_handler(Text(equals="Абдул черт"))
+async def abdulchert(message:types.Message):
+    await message.reply("Я знаю🥲")
+
+@dp.message_handler(Text(equals="Абылай черт"))
+async def abuchert(message:types.Message):
+    await message.reply("Согласен 💯!")
 
 
 @dp.message_handler(Text(equals="Menu"))
