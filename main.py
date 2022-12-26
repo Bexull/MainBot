@@ -98,6 +98,11 @@ async def admin(message: types.Message):
         "Ты не админ..."
 @dp.message_handler(commands=['dick'])
 async def load_new_count(message: types.Message) ->None:
+    await set_data_now(datetime.now().day)
+    lastdata_user = await get_last_data(message.from_user.id)
+    nowdata = await get_now_date()
+    if lastdata_user != nowdata:
+        await chance_set_zero(message.from_user.id)
     chance = await chance_from_db(message.from_user.id)
     if chance[0] == 0:
         rand = random.randint(-20,30)
@@ -111,12 +116,7 @@ async def load_new_count(message: types.Message) ->None:
     else:
         await message.answer("Ты уже играл! Следующая попытка завтра!")
 
-    lastdata_user = await get_last_data(message.from_user.id)
-    print(lastdata_user)
-    nowdata = await get_now_date()
-    print(nowdata)
-    if lastdata_user != nowdata:
-        await chance_set_zero(message.from_user.id)
+
     alluser = await get_all_user(message.from_user.id)
     await show_all_user(alluser, message)
 @dp.message_handler(commands='show_last_data_play')
@@ -130,7 +130,6 @@ async def show_now_data(message: types.Message):
 async def show_all(products:list, message:types.Message) -> None:
     for product in products:
         await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Занимает в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
-        await set_id(product[0], message.from_user.id)
 
 async def show_all_user(products:list, message:types.Message) -> None:
     id = await get_id(message.from_user.id)
@@ -146,10 +145,6 @@ async def show_count(products: list, message: types.Message):
 async def top_dick(message: types.Message):
     all = await get_all()
     await show_all(all, message)
-
-
-
-
 
 @dp.message_handler(commands=['log'])
 async def logging(message: types.Message, state: FSMContext) -> None:

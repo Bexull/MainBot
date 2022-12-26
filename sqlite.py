@@ -72,7 +72,7 @@ async def chance_set_zero(id):
     db.commit()
 
 async def get_all():
-    all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count ASC) AS id , * FROM profile").fetchall()
+    all = cur.execute("SELECT ROW_NUMBER() OVER(ORDER BY count DESC) AS id , * FROM profile").fetchall()
     return all
 
 async def com(user_id):
