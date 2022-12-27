@@ -58,8 +58,19 @@ lifehack_photos = dict(zip(arr_photos_lifehacks,["Приходи в хороше
                                                  "Надевайте чехол на коньки, если вы хотите куда либо сходить, например в уборную. Это вам сэкономит время, коньки не придется снимать,также вы продлите жизнь лезвию конька."]))
 random_photo_lifehack = random.choice(list(lifehack_photos.keys()))
 
+updates = [
+    """
+    #27.12.2022
+    Исправлена ошибка /log с добавлением именем
+    Исправлена команда /Random
+    Настроена База Данных
+    """
+]
+
+
 class ProfileStateGroup(StatesGroup):
     name = State()
+    age = State()
 
 
 
@@ -80,22 +91,22 @@ async def send_random(message: types.Message):
 
 @dp.message_handler(commands=['start'])
 async def start_cm(message:types.Message):
-    await message.answer('<em>Wellcome to our Telegram Bot!</em>',
+    await message.answer(message.from_user.username + '<em> Wellcome to our Telegram Bot!</em>',
                          parse_mode="HTML",
                          reply_markup=keyboard)
     await create_profile(user_id=message.from_user.id)
-    await set_data_now(datetime.now().day)
+    await set_data_now(datetime.now().date())
 
 
 
 @dp.message_handler(commands=['admin'])
 async def admin(message: types.Message):
     user_id = await get_user_id(message.from_user.id)
-    if user_id[0] == '1015079692':
+    if user_id[0] == '1015079692' or user_id[0] == '1087968824':
         all = await get_all()
         await message.answer(all)
-    else:
-        "Ты не админ..."
+    if user_id[0] != '1015079692' or user_id[0] != '1087968824':
+       await message.answer("Ты не админ...")
 @dp.message_handler(commands=['dick'])
 async def load_new_count(message: types.Message) ->None:
     await set_data_now(datetime.now().date())
@@ -122,24 +133,12 @@ async def load_new_count(message: types.Message) ->None:
 @dp.message_handler(commands='show_last_data_play')
 async def show_last_data(message: types.Message):
     last = await get_last_data(message.from_user.id)
-    await message.answer("В последний раз ты играл " + str(last[0]) + " этого месяца")
+    await message.answer("Дата когда ты играл в последний раз: " + str(last[0]) )
 @dp.message_handler(commands='show_current_data')
 async def show_now_data(message: types.Message):
     now = await get_now_date()
-    await message.answer("Сегодня " + str(now[0]) + " день этого месяца")
-async def show_all(products:list, message:types.Message) -> None:
-    for product in products:
-        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Занимает в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
+    await message.answer("Сегодня " + str(now[0]))
 
-async def show_all_user(products:list, message:types.Message) -> None:
-    id = await get_id(message.from_user.id)
-    for product in products:
-        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Ты занимаешь в топе " + f"{id[0]}" + " место!", parse_mode='HTML')
-
-
-async def show_count(products: list, message: types.Message):
-    for product in products:
-        await bot.send_message(chat_id=message.chat.id,text=f"{product[2]}")
 
 @dp.message_handler(commands=['top_dick'])
 async def top_dick(message: types.Message):
@@ -147,17 +146,17 @@ async def top_dick(message: types.Message):
     await show_all(all, message)
 
 @dp.message_handler(commands=['log'])
-async def logging(message: types.Message, state: FSMContext) -> None:
+async def logging(message: types.Message):
     await message.answer("Пришли мне свой ник!")
-    await set_username('@' + str(message.from_user.username), message.from_user.id)
     await ProfileStateGroup.name.set()
+    await set_username('@' + str(message.from_user.username), message.from_user.id)
 
-@dp.message_handler(state=ProfileStateGroup.name)
-async def load_name(message: types.Message, state: FSMContext) -> None:
+@dp.message_handler(content_types=['text'],state=ProfileStateGroup.name)
+async def load_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['name'] = message.text
-    await edit_profile(state, user_id=message.from_user.id)
-    await message.reply("Completed!")
+    await edit_profile(state, message.from_user.id)
+    await message.reply("Твой ник успешно добавлен!")
     await state.finish()
 
 @dp.message_handler(commands=['help'])
@@ -204,6 +203,9 @@ async def location(message: types.Message):
 async def pic(message: types.Message):
     await bot.send_photo(message.chat.id,photo="https://i.pinimg.com/564x/e3/11/c5/e311c52b0f472ebe9883e6bad20ec504.jpg")
     await bot.send_message(message.chat.id,text="Do you like it?",reply_markup=inkk)
+@dp.message_handler(commands=['Random'])
+async def SendRandomPhoto(message: types.Message):
+    await send_random(message)
 
 @dp.message_handler(Text(equals="random_photo"))
 async def random_photo(message: types.Message):
@@ -211,10 +213,6 @@ async def random_photo(message: types.Message):
     await message.answer(text="Please choose button 'Random' ",
                          reply_markup=kb)
 
-
-@dp.message_handler(Text(equals="/Random"))
-async def SendRandomPhoto(message: types.Message):
-    await send_random(message)
 
 @dp.message_handler(Text(equals="Абдул черт"))
 async def abdulchert(message:types.Message):
@@ -275,6 +273,19 @@ async def callbackall(callback: types.CallbackQuery):
 async def send_emoji(message: types.Message):
     if message.text == "thx":
         await message.reply("💗")
+
+async def show_all(products:list, message:types.Message) -> None:
+    for product in products:
+        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Занимает в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
+
+async def show_all_user(products:list, message:types.Message) -> None:
+    for product in products:
+        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n", parse_mode='HTML')
+
+
+async def show_count(products: list, message: types.Message):
+    for product in products:
+        await bot.send_message(chat_id=message.chat.id,text=f"{product[2]}")
 
 if __name__ == "__main__" :
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)

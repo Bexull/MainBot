@@ -17,10 +17,12 @@ async def create_profile(user_id):
 
 async def edit_profile(state, user_id):
     async with state.proxy() as data:
-        cur.execute("UPDATE profile SET  name = '{}' WHERE user_id == '{}'".format(
+        cur.execute("UPDATE profile SET name = '{}' WHERE user_id == '{}'".format(
             data['name'], user_id))
         db.commit()
-
+async def set_name(name,id):
+    cur.execute("UPDATE profile SET name = ? WHERE user_id = ?", (name,id,))
+    db.commit()
 async def edit_chance(state, user_id):
     async with state.proxy() as data:
         cur.execute("UPDATE profile SET  chance = '{}' WHERE user_id == '{}'".format(
