@@ -14,7 +14,6 @@ from sqlite import *
 from datetime import datetime
 
 
-
 arr = []
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
