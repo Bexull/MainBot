@@ -4,7 +4,7 @@ import aiogram
 from aiogram.dispatcher.filters.state import StatesGroup,State
 from aiogram import Bot, Dispatcher, executor, types,exceptions
 from aiogram.dispatcher.filters import Text
-from config import TOKEN_API
+from config import TOKEN_API, ADMIN_ID_1, ADMIN_ID_2
 import Keyboard
 from Keyboard import keyboard, ikb, inkk, kb, ikb2 , kb_medeu, ink_medeu, ink_medeu2, \
     ink_session_workingDays, Nextink
@@ -15,11 +15,11 @@ from datetime import datetime
 
 
 
-flag = False
+arr = []
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot, storage=MemoryStorage())
-ADMIN_ID = 1015079692
+
 
 HELP_COMMAND = """
 /help - list of commands
@@ -102,13 +102,15 @@ async def start_cm(message:types.Message):
 @dp.message_handler(commands=['admin'])
 async def admin(message: types.Message):
     user_id = await get_user_id(message.from_user.id)
-    if user_id[0] == '1015079692' or user_id[0] == '1087968824':
+    if user_id[0] == ADMIN_ID_1 or user_id[0] == ADMIN_ID_2:
         all = await get_all()
-        await message.answer(all)
-    if user_id[0] != '1015079692' or user_id[0] != '1087968824':
+        await message.answer(all.__str__().replace('),', '),\n-------------------------------------------\n'))
+    else:
        await message.answer("Ты не админ...")
 @dp.message_handler(commands=['dick'])
 async def load_new_count(message: types.Message) ->None:
+    await set_data_now(datetime.now().date())
+    await create_profile(user_id=message.from_user.id)
     await set_data_now(datetime.now().date())
     lastdata_user = await get_last_data(message.from_user.id)
     nowdata = await get_now_date()
@@ -120,16 +122,12 @@ async def load_new_count(message: types.Message) ->None:
         await new_count(rand, message.from_user.id)
         name = await name_from_db(message.from_user.id)
         count = await count_from_db(message.from_user.id)
-        await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]))
+        await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]) + "cм")
         await chance_set(message.from_user.id)
         await chance_set(message.chat.id)
         await set_last_data(datetime.now().date(), message.from_user.id)
     else:
         await message.answer("Ты уже играл! Следующая попытка завтра!")
-
-
-    alluser = await get_all_user(message.from_user.id)
-    await show_all_user(alluser, message)
 @dp.message_handler(commands='show_last_data_play')
 async def show_last_data(message: types.Message):
     last = await get_last_data(message.from_user.id)
@@ -142,14 +140,19 @@ async def show_now_data(message: types.Message):
 
 @dp.message_handler(commands=['top_dick'])
 async def top_dick(message: types.Message):
+    global arr
     all = await get_all()
     await show_all(all, message)
+    await create_profile(user_id=message.from_user.id)
+    await set_data_now(datetime.now().date())
 
 @dp.message_handler(commands=['log'])
 async def logging(message: types.Message):
     await message.answer("Пришли мне свой ник!")
     await ProfileStateGroup.name.set()
     await set_username('@' + str(message.from_user.username), message.from_user.id)
+    await create_profile(user_id=message.from_user.id)
+    await set_data_now(datetime.now().date())
 
 @dp.message_handler(content_types=['text'],state=ProfileStateGroup.name)
 async def load_name(message: types.Message, state: FSMContext):
@@ -162,6 +165,8 @@ async def load_name(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['help'])
 async def help(message:types.Message):
     await message.answer(HELP_COMMAND)
+    await create_profile(user_id=message.from_user.id)
+    await set_data_now(datetime.now().date())
 @dp.message_handler(commands=['all'])
 async def all(message: types.Message):
     all = await get_username()
@@ -223,6 +228,7 @@ async def abuchert(message:types.Message):
     await message.reply("Согласен 💯!")
 
 
+
 @dp.message_handler(Text(equals="Menu"))
 async def menu(message: types.Message):
     await message.answer(text="Wellcome to main Menu",
@@ -275,8 +281,20 @@ async def send_emoji(message: types.Message):
         await message.reply("💗")
 
 async def show_all(products:list, message:types.Message) -> None:
+    global arr
+    s = "------Топ игроков------"
+    arr.append(s)
     for product in products:
-        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n" + "Занимает в топе " + f"{product[0]}" + " место!", parse_mode='HTML')
+        strr = str(product[0]) + " | " + str(product[2]) + " ➾ " + str(product[3]) + "см"
+        arr.append(strr)
+
+    marr = arr.__str__().replace(',', '\n')
+    marr = marr.replace('------Топ игроков------', '------Топ игроков------\n')
+    marr = marr.replace('[', '')
+    marr = marr.replace(']', '')
+    marr = marr.replace("'", '')
+    await message.answer(marr)
+    arr.clear()
 
 async def show_all_user(products:list, message:types.Message) -> None:
     for product in products:
