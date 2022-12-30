@@ -45,6 +45,10 @@ async def set_last_data(last_data,id):
     cur.execute("UPDATE profile SET LastData = ? WHERE user_id = ?", (last_data, id,))
     db.commit()
 
+async def set_prise_count(count):
+    cur.execute("UPDATE profile SET count = count + ?", (count,))
+    db.commit()
+
 async def set_username(username,id):
     cur.execute("UPDATE profile SET username = ? WHERE user_id = ?", (username,id,))
     db.commit()
