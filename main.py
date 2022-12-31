@@ -111,7 +111,7 @@ async def admin(message: types.Message):
 async def gift_from_bot(message: types.Message):
     user_id = await get_user_id(message.from_user.id)
     if user_id[0] == ADMIN_ID_1 or user_id[0] == ADMIN_ID_2:
-        await message.answer("Дорогие друзья, поздравляю Вас с наступившим Новым Годом!\n\n Желаю чтобы Вы были верны к своему Другу и не изменяли ему. Желаю чтобы у вашего Друга появилась Подруга, которая поддержит Его в любую трудную минуту.\n\nВ честь Нового Года у меня к Вам тоже есть подарок. Я дарю Вам по +23см. С новым годом! С новым счастьем!\n🎄😈❤️ ✨")
+        await message.answer("Дорогие друзья, поздравляю Вас с наступившим Новым Годом!\n\n Желаю чтобы Вы были верны к своему Другу и не изменяли ему. Желаю чтобы у вашего Друга появилась Подруга, которая поддержит Его в любую трудную минуту.\n\nВ честь Нового Года у меня к Вам тоже есть подарок. Я дарю Вам по +23см, и 3 дня без минусов. С новым годом! С новым счастьем!\n🎄😈❤️ ✨")
         await bot.send_sticker(chat_id=message.chat.id, sticker='CAACAgIAAxkBAAEHE3Vjry2TG0czbbraZNAomHeS_N134wACdBEAAuxp2EnG9TvQRYIxrS0E')
         await set_prise_count(23)
 @dp.message_handler(commands=['dick'])
@@ -126,7 +126,7 @@ async def load_new_count(message: types.Message) ->None:
     chance = await chance_from_db(message.from_user.id)
     if chance[0] == 0:
 
-        rand = random.randint(-20,30)
+        rand = random.randint(0,30)
         await new_count(rand, message.from_user.id)
         name = await name_from_db(message.from_user.id)
         count = await count_from_db(message.from_user.id)
