@@ -1,10 +1,12 @@
 import random
 import aiogram
+import requests
+import datetime
 
 from aiogram.dispatcher.filters.state import StatesGroup,State
 from aiogram import Bot, Dispatcher, executor, types,exceptions
 from aiogram.dispatcher.filters import Text
-from config import TOKEN_API, ADMIN_ID_1, ADMIN_ID_2
+from config import TOKEN_API, ADMIN_ID_1, ADMIN_ID_2 , open_weather_token
 import Keyboard
 from Keyboard import keyboard, ikb, inkk, kb, ikb2 , kb_medeu, ink_medeu, ink_medeu2, \
     ink_session_workingDays, Nextink
@@ -12,6 +14,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from sqlite import *
 from datetime import datetime
+from pprint import pprint
 
 
 arr = []
@@ -32,6 +35,7 @@ HELP_COMMAND = """
 /show_current_data - Current data
 /all - calls everyone
 /admin - if you admin
+/weather - Check the weather
 """
 arr_photos = [
     "https://i.pinimg.com/564x/0c/6b/7b/0c6b7bfe44ec0d273ac086322feda6e5.jpg",
@@ -71,13 +75,15 @@ class ProfileStateGroup(StatesGroup):
     name = State()
     age = State()
 
+class pogoda(StatesGroup):
+    city = State()
+
 
 
 async def on_startup(_):
     print('Bot was successfully started!')
     await db_start()
     print("Connected with DB")
-
 
 async def send_random(message: types.Message):
     randomPhoto = random.choice(list(photos.keys()))
@@ -95,6 +101,8 @@ async def start_cm(message:types.Message):
                          reply_markup=keyboard)
     await create_profile(user_id=message.from_user.id)
     await set_data_now(datetime.now().date())
+
+
 
 
 
@@ -125,12 +133,16 @@ async def load_new_count(message: types.Message) ->None:
         await chance_set_zero(message.from_user.id)
     chance = await chance_from_db(message.from_user.id)
     if chance[0] == 0:
-
-        rand = random.randint(0,30)
+        rand = random.randint(-15,30)
         await new_count(rand, message.from_user.id)
         name = await name_from_db(message.from_user.id)
         count = await count_from_db(message.from_user.id)
-        await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]) + "cм")
+        if rand > 0:
+            await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]) + "cм")
+        if rand < 0:
+            await message.answer(str(name[0]) + " твой писюн сократился на " + str(rand) + "см сейчас он равен: " + str(count[0]) + "cм")
+        if rand == 0:
+            await message.answer(str(name[0]) + " Он проживает свою жизнь стабильно так же как и ты - без девушки _fr_ ")
         await chance_set(message.from_user.id)
         await chance_set(message.chat.id)
         await set_last_data(datetime.now().date(), message.from_user.id)
@@ -144,8 +156,6 @@ async def show_last_data(message: types.Message):
 async def show_now_data(message: types.Message):
     now = await get_now_date()
     await message.answer("Сегодня " + str(now[0]))
-
-
 @dp.message_handler(commands=['top_dick'])
 async def top_dick(message: types.Message):
     global arr
@@ -153,7 +163,6 @@ async def top_dick(message: types.Message):
     await show_all(all, message)
     await create_profile(user_id=message.from_user.id)
     await set_data_now(datetime.now().date())
-
 @dp.message_handler(commands=['log'])
 async def logging(message: types.Message):
     await message.answer("Пришли мне свой ник!")
@@ -161,7 +170,6 @@ async def logging(message: types.Message):
     await set_username('@' + str(message.from_user.username), message.from_user.id)
     await create_profile(user_id=message.from_user.id)
     await set_data_now(datetime.now().date())
-
 @dp.message_handler(content_types=['text'],state=ProfileStateGroup.name)
 async def load_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
@@ -219,6 +227,57 @@ async def pic(message: types.Message):
 @dp.message_handler(commands=['Random'])
 async def SendRandomPhoto(message: types.Message):
     await send_random(message)
+
+
+@dp.message_handler(commands=['weather'])
+async def get_weather(message: types.Message):
+    await message.answer("Отправь мне имя Города:")
+    await pogoda.city.set()
+@dp.message_handler(state=pogoda.city)
+async def load_city(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['city'] = message.text
+
+    dict_for_weather = {
+        "Clear":"Ясно☀️",
+        "Clouds": "Облачно☁️",
+        "Rain": "Дождь🌧",
+        "Drizzle": "Дождь🌧",
+        "Thunderstorm": "Гроза⛈",
+        "Snow": "Снег❄️",
+        "Mist": "Туман😶‍🌫️",
+        "Fog" : "Туман😶‍🌫️"
+    }
+    await state.finish()
+
+
+    try:
+        r = requests.get(
+            f"http://api.openweathermap.org/data/2.5/weather?q={message.text}&appid={open_weather_token}&units=metric"
+
+        )
+        data = r.json()
+        city = data["name"]
+        cur_weather = data["main"]["temp"]
+
+        type = data["weather"][0]["main"]
+        if type in dict_for_weather:
+            wd = dict_for_weather[type]
+        else:
+            wd = "Хз какая погода честно братан..."
+        humidity = data["main"]["humidity"]
+        wind = data["wind"]["speed"]
+        feels_like = data["main"]["feels_like"]
+        sunrise_timestamp = datetime.fromtimestamp(data["sys"]["sunrise"]).time()
+        length_of_the_day = datetime.fromtimestamp(data["sys"]["sunset"]) - datetime.fromtimestamp(
+            data["sys"]["sunrise"])
+        await message.answer(f"-----{datetime.now().strftime('%Y-%m-%d %H:%M')}-----\n\n"f"Погода в городе: {city}\nТемпература: {cur_weather}C, Ощущается как: {feels_like}С, {wd}\nВлажность: {humidity}%\nВетренность: {wind}м\с\nВремя рассвета: {sunrise_timestamp}\nПродолжительность дня: {length_of_the_day}\n\n"
+              "Запомните твари - а то забудете.")
+        await bot.send_sticker(chat_id=message.chat.id,sticker="CAACAgIAAxkBAAEHnE1j4UvyRWDHHA5GCZ93pLj2JT89pgACxQEAAnT4VBtdU0q5XgyfTy4E")
+    except Exception as ex:
+        await message.reply("Ты можешь хоть название своего города написать без ошибки? Запусти команду еще раз и напиши правильно плз")
+        await bot.send_sticker(chat_id=message.chat.id,
+                               sticker='CAACAgIAAxkBAAEHnEtj4Uu_fW47Jw5AehYHtRuBfi2cigACgAEAAnT4VBskuogiCHU7bi4E')
 
 @dp.message_handler(Text(equals="random_photo"))
 async def random_photo(message: types.Message):
@@ -314,5 +373,7 @@ async def show_count(products: list, message: types.Message):
         await bot.send_message(chat_id=message.chat.id,text=f"{product[2]}")
 
 if __name__ == "__main__" :
+
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+
 
