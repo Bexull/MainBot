@@ -1,379 +1,198 @@
+import logging
 import random
-import aiogram
-import requests
-import datetime
+import os
+import pymongo
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
+from datetime import datetime, timedelta
+import openai
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from config import *
 
-from aiogram.dispatcher.filters.state import StatesGroup,State
-from aiogram import Bot, Dispatcher, executor, types,exceptions
-from aiogram.dispatcher.filters import Text
-from config import TOKEN_API, ADMIN_ID_1, ADMIN_ID_2 , open_weather_token
-import Keyboard
-from Keyboard import keyboard, ikb, inkk, kb, ikb2 , kb_medeu, ink_medeu, ink_medeu2, \
-    ink_session_workingDays, Nextink
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher import FSMContext
-from sqlite import *
-from datetime import datetime
-from pprint import pprint
+# настройки бота
+API_TOKEN = TOKEN_API
 
+# создаем объекты бота и диспетчера
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
 
-arr = []
-storage = MemoryStorage()
-bot = Bot(TOKEN_API)
-dp = Dispatcher(bot, storage=MemoryStorage())
+# подключаемся к базе данных MongoDB
+client = pymongo.MongoClient(CLIENT)
+db = client['telegram_bot']
+
+#ChatGPT
+openai.api_key = AI
+
+# создаем коллекцию для хранения результатов пользователей
+results = db['results']
+
+# устанавливаем уровень логирования
+logging.basicConfig(level=logging.INFO)
+
+# обработчик команды /start
+@dp.message_handler(commands=['start'])
+async def handle_start_command(message: types.Message):
+    await message.answer(message.from_user.username + '<em> Wellcome to our Telegram Bot!</em>',
+                         parse_mode="HTML")
 
 
 HELP_COMMAND = """
 /help - list of commands
 /start - for starting Bot
-/Medeu - some information about Medeu(With lifeHacks)
-/Random - get some random photos
-/log - log in
 /dick - grow dick
-/top_dick - top rang
-/show_last_data_play - Last data
-/show_current_data - Current data
-/all - calls everyone
-/admin - if you admin
-/weather - Check the weather
+/top - top in the group
 """
-arr_photos = [
-    "https://i.pinimg.com/564x/0c/6b/7b/0c6b7bfe44ec0d273ac086322feda6e5.jpg",
-    "https://i.pinimg.com/564x/81/43/10/81431081318e973eb31c7e6c24276b17.jpg",
-    "https://i.pinimg.com/564x/34/f3/07/34f307995dd40ce5370d37b9cd4ecc4f.jpg",
-    "https://i.pinimg.com/564x/c4/51/af/c451af8fc8de69d2b5ce48eeff602522.jpg",
-    ""
-]
+SCHEDULE_COMMAND = "/schedule - Schedule for group"
 
-photos = dict(zip(arr_photos, ['1','2','3','4']))
-
-arr_photos_lifehacks = [
-    "https://i.pinimg.com/564x/23/75/43/2375438815779b591831965cb05e2676.jpg",
-    "https://i.pinimg.com/564x/5f/02/8c/5f028c8da50ffa5f4e5d5ebf5ba9c63c.jpg",
-    "https://i.pinimg.com/564x/72/ed/85/72ed857d648c0d4ced2e581bbc41c19f.jpg",
-    "https://i.pinimg.com/236x/ae/73/cb/ae73cb7dc4b964784aa89d9e33717d33.jpg",
-    "https://i.pinimg.com/236x/b4/7b/9e/b47b9e96654d62d5dd35ac1100db95c6.jpg"
-]
-lifehack_photos = dict(zip(arr_photos_lifehacks,["Приходи в хорошем настроении!✨",
-                                                 "Завяжи коньки покрепче, чтобы он фиксировал голеностоп, верхние(последние 3-4) люверсы затяни туже чем предыдушие, но не переборщи😅",
-                                                 f"Можно купить шнурки с пропиткой, они лучше держат шнуровку, но тяжело расшнуровать",
-                                                 "Перед тем как завязывать лучше оборачивать шнурок трижды, так он будет лучше держать шнуровку",
-                                                 "Надевайте чехол на коньки, если вы хотите куда либо сходить, например в уборную. Это вам сэкономит время, коньки не придется снимать,также вы продлите жизнь лезвию конька."]))
-random_photo_lifehack = random.choice(list(lifehack_photos.keys()))
-
-updates = [
-    """
-    #27.12.2022
-    Исправлена ошибка /log с добавлением именем
-    Исправлена команда /Random
-    Настроена База Данных
-    """
-]
-
-
-class ProfileStateGroup(StatesGroup):
-    name = State()
-    age = State()
-
-class pogoda(StatesGroup):
-    city = State()
-
-
-
-async def on_startup(_):
-    print('Bot was successfully started!')
-    await db_start()
-    print("Connected with DB")
-
-async def send_random(message: types.Message):
-    randomPhoto = random.choice(list(photos.keys()))
-    await bot.send_photo(message.chat.id,
-                         photo=randomPhoto,
-                         caption=photos[randomPhoto],
-                         reply_markup=ikb2)
-
-
-
-@dp.message_handler(commands=['start'])
-async def start_cm(message:types.Message):
-    await message.answer(message.from_user.username + '<em> Wellcome to our Telegram Bot!</em>',
-                         parse_mode="HTML",
-                         reply_markup=keyboard)
-    await create_profile(user_id=message.from_user.id)
-    await set_data_now(datetime.now().date())
-
-
-
-
-
-@dp.message_handler(commands=['admin'])
-async def admin(message: types.Message):
-    user_id = await get_user_id(message.from_user.id)
-    if user_id[0] == ADMIN_ID_1 or user_id[0] == ADMIN_ID_2:
-        all = await get_all()
-        await message.answer(all.__str__().replace('),', '),\n-------------------------------------------\n'))
-    else:
-       await message.answer("Ты не админ...")
-
-@dp.message_handler(commands=['gift'])
-async def gift_from_bot(message: types.Message):
-    user_id = await get_user_id(message.from_user.id)
-    if user_id[0] == ADMIN_ID_1 or user_id[0] == ADMIN_ID_2:
-        await message.answer("Дорогие друзья, поздравляю Вас с наступившим Новым Годом!\n\n Желаю чтобы Вы были верны к своему Другу и не изменяли ему. Желаю чтобы у вашего Друга появилась Подруга, которая поддержит Его в любую трудную минуту.\n\nВ честь Нового Года у меня к Вам тоже есть подарок. Я дарю Вам по +23см, и 3 дня без минусов. С новым годом! С новым счастьем!\n🎄😈❤️ ✨")
-        await bot.send_sticker(chat_id=message.chat.id, sticker='CAACAgIAAxkBAAEHE3Vjry2TG0czbbraZNAomHeS_N134wACdBEAAuxp2EnG9TvQRYIxrS0E')
-        await set_prise_count(23)
-@dp.message_handler(commands=['dick'])
-async def load_new_count(message: types.Message) ->None:
-    await set_data_now(datetime.now().date())
-    await create_profile(user_id=message.from_user.id)
-    await set_data_now(datetime.now().date())
-    lastdata_user = await get_last_data(message.from_user.id)
-    nowdata = await get_now_date()
-    if lastdata_user != nowdata:
-        await chance_set_zero(message.from_user.id)
-    chance = await chance_from_db(message.from_user.id)
-    if chance[0] == 0:
-        rand = random.randint(-15,30)
-        await new_count(rand, message.from_user.id)
-        name = await name_from_db(message.from_user.id)
-        count = await count_from_db(message.from_user.id)
-        if rand > 0:
-            await message.answer(str(name[0]) + " твой писюн вырос на " + str(rand) + "см сейчас он равен: " + str(count[0]) + "cм")
-        if rand < 0:
-            await message.answer(str(name[0]) + " твой писюн сократился на " + str(rand) + "см сейчас он равен: " + str(count[0]) + "cм")
-        if rand == 0:
-            await message.answer(str(name[0]) + " Он проживает свою жизнь стабильно так же как и ты - без девушки _fr_ ")
-        await chance_set(message.from_user.id)
-        await chance_set(message.chat.id)
-        await set_last_data(datetime.now().date(), message.from_user.id)
-    else:
-        await message.answer("Ты уже играл! Следующая попытка завтра!")
-@dp.message_handler(commands='show_last_data_play')
-async def show_last_data(message: types.Message):
-    last = await get_last_data(message.from_user.id)
-    await message.answer("Дата когда ты играл в последний раз: " + str(last[0]) )
-@dp.message_handler(commands='show_current_data')
-async def show_now_data(message: types.Message):
-    now = await get_now_date()
-    await message.answer("Сегодня " + str(now[0]))
-@dp.message_handler(commands=['top_dick'])
-async def top_dick(message: types.Message):
-    global arr
-    all = await get_all()
-    await show_all(all, message)
-    await create_profile(user_id=message.from_user.id)
-    await set_data_now(datetime.now().date())
-@dp.message_handler(commands=['log'])
-async def logging(message: types.Message):
-    await message.answer("Пришли мне свой ник!")
-    await ProfileStateGroup.name.set()
-    await set_username('@' + str(message.from_user.username), message.from_user.id)
-    await create_profile(user_id=message.from_user.id)
-    await set_data_now(datetime.now().date())
-@dp.message_handler(content_types=['text'],state=ProfileStateGroup.name)
-async def load_name(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['name'] = message.text
-    await edit_profile(state, message.from_user.id)
-    await message.reply("Твой ник успешно добавлен!")
-    await state.finish()
 
 @dp.message_handler(commands=['help'])
-async def help(message:types.Message):
-    await message.answer(HELP_COMMAND)
-    await create_profile(user_id=message.from_user.id)
-    await set_data_now(datetime.now().date())
-@dp.message_handler(commands=['all'])
-async def all(message: types.Message):
-    all = await get_username()
-    mall = all.__str__().replace('[','')
-    m1all = mall.replace(']','')
-    m2all = m1all.replace(',',' ')
-    m3all = m2all.replace('(','')
-    m4all = m3all.replace(')','')
-    m5all = m4all.replace("'",'')
-    await message.answer(m5all)
-@dp.message_handler(commands=['Medeu'])
-async def Medeu(message:types.Message):
-    await message.answer(text="Medeu",reply_markup=kb_medeu)
+async def help(message: types.Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    chat_member = await bot.get_chat_member(chat_id, user_id)
 
-@dp.message_handler(Text(equals="Info"))
-async def infoMedeu(message: types.Message):
-    await message.answer(text="Высокогорный каток медеу\n"
-                              "2Gis ссылка: https://go.2gis.com/hx27s"
-                              ,reply_markup=ink_medeu)
-    await message.delete()
-@dp.message_handler(Text(equals="LifeHacks"))
-async def lifehack(message: types.Message):
-    await bot.send_photo(message.chat.id,
-                         photo=random_photo_lifehack,
-                         caption=lifehack_photos[random_photo_lifehack],
-                         reply_markup=Nextink)
-    await message.delete()
-@dp.message_handler(commands=['give'])
-async def start_cm(message:types.Message):
-    await bot.send_sticker(message.chat.id,sticker= "CAACAgIAAxkBAAEG4Xdjn0CkTaL-WadR0Nean4tMbmulIAACbQ8AAvX64EopOdJWyR2ApywE")
-    await bot.send_message(message.chat.id,text="LOL",reply_markup=ikb)
-    await message.delete()
+    if (chat_id == -1001531484283 and chat_member.status == 'member') or user_id == 1015079692:
+        await message.answer(HELP_COMMAND + SCHEDULE_COMMAND)
+    else:
+        await message.answer(HELP_COMMAND)
 
-@dp.message_handler(commands=['loc'])
-async def location(message: types.Message):
-    await bot.send_location(chat_id=message.from_user.id,longitude=33,latitude=23)
+# обработчик команды /grow
+last_used = {}
+@dp.message_handler(commands=['grow'])
+async def cmd_grow(message: types.Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
 
-@dp.message_handler(commands=['picture'])
-async def pic(message: types.Message):
-    await bot.send_photo(message.chat.id,photo="https://i.pinimg.com/564x/e3/11/c5/e311c52b0f472ebe9883e6bad20ec504.jpg")
-    await bot.send_message(message.chat.id,text="Do you like it?",reply_markup=inkk)
-@dp.message_handler(commands=['Random'])
-async def SendRandomPhoto(message: types.Message):
-    await send_random(message)
+    # находим пользователя в базе данных
+    user = results.find_one({'chat_id': chat_id, 'user_id': user_id})
 
+    # проверяем, прошел ли уже текущий день с момента последнего использования команды
+    last_used = user.get('last_used') if user else None
+    now_utc = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    if last_used and last_used >= now_utc:
+        await message.answer('Ты уже играл! Следующая попытка завтра!')
+        return
 
-@dp.message_handler(commands=['weather'])
-async def get_weather(message: types.Message):
-    await message.answer("Отправь мне имя Города:")
-    await pogoda.city.set()
-@dp.message_handler(state=pogoda.city)
-async def load_city(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['city'] = message.text
+    # находим результат за предыдущий день
+    result = results.find_one({'chat_id': chat_id, 'user_id': user_id, 'date': {
+        '$gte': (now_utc - timedelta(days=1)), '$lt': now_utc}})
 
-    dict_for_weather = {
-        "Clear":"Ясно☀️",
-        "Clouds": "Облачно☁️",
-        "Rain": "Дождь🌧",
-        "Drizzle": "Дождь🌧",
-        "Thunderstorm": "Гроза⛈",
-        "Snow": "Снег❄️",
-        "Mist": "Туман😶‍🌫️",
-        "Fog" : "Туман😶‍🌫️"
-    }
-    await state.finish()
+    if result:
+        # если результат за предыдущий день уже есть, то добавляем новый результат к старому
+        RandomValue = random.randint(-15,30)
+        result_value = result['value'] + RandomValue
+        results.update_one({'_id': result['_id']}, {'$set': {'value': result_value}})
+        if RandomValue > 0:
+            await message.answer(
+                f'{message.from_user.username} твой писюн вырос на {RandomValue}см, сейчас он равен: {result_value}')
+        if RandomValue < 0:
+            await message.answer(
+                f'{message.from_user.username} твой писюн сократился на {RandomValue}см, сейчас он равен: {result_value}')
+    elif user:
+        # если пользователь уже есть в базе данных, но результат за предыдущий день не найден, то создаем новую запись
+        RandomValue = random.randint(-15, 30)
+        result_value = RandomValue
+        results.insert_one({'chat_id': chat_id, 'user_id': user_id, 'value': result_value, 'date': now_utc})
+        if RandomValue > 0:
+            await message.answer(f'{message.from_user.username} твой писюн вырос на {RandomValue}см, сейчас он равен: {result_value}')
+        if RandomValue < 0:
+            await message.answer(
+                f'{message.from_user.username} твой писюн сократился на {RandomValue}см, сейчас он равен: {result_value}')
+    else:
+        # если пользователь не найден в базе данных, то создаем новую запись и сохраняем время первого использования команды
+        RandomValue = random.randint(-15, 30)
+        result_value = RandomValue
+        results.insert_one({'chat_id': chat_id, 'user_id': user_id, 'value': result_value, 'date': now_utc, 'first_used': now_utc})
+        if RandomValue > 0:
+            await message.answer(
+                f'{message.from_user.username} твой писюн вырос на {RandomValue}см, сейчас он равен: {result_value}')
+        if RandomValue < 0:
+            await message.answer(
+                f'{message.from_user.username} твой писюн сократился на {RandomValue}см, сейчас он равен: {result_value}')
 
+    # обновляем время последнего использования команды в UTC-формате
+    results.update_one({'chat_id': chat_id, 'user_id': user_id}, {'$set': {'last_used': datetime.utcnow()}})
 
-    try:
-        r = requests.get(
-            f"http://api.openweathermap.org/data/2.5/weather?q={message.text}&appid={open_weather_token}&units=metric"
+@dp.message_handler(commands=['ai'])
+async def send(message: types.Message):
+    text = message.text.replace("/ai",'')
 
-        )
-        data = r.json()
-        city = data["name"]
-        cur_weather = data["main"]["temp"]
-
-        type = data["weather"][0]["main"]
-        if type in dict_for_weather:
-            wd = dict_for_weather[type]
-        else:
-            wd = "Хз какая погода честно братан..."
-        humidity = data["main"]["humidity"]
-        wind = data["wind"]["speed"]
-        feels_like = data["main"]["feels_like"]
-        sunrise_timestamp = datetime.fromtimestamp(data["sys"]["sunrise"]).time()
-        length_of_the_day = datetime.fromtimestamp(data["sys"]["sunset"]) - datetime.fromtimestamp(
-            data["sys"]["sunrise"])
-        await message.answer(f"-----{datetime.now().strftime('%Y-%m-%d %H:%M')}-----\n\n"f"Погода в городе: {city}\nТемпература: {cur_weather}C, Ощущается как: {feels_like}С, {wd}\nВлажность: {humidity}%\nВетренность: {wind}м\с\nВремя рассвета: {sunrise_timestamp}\nПродолжительность дня: {length_of_the_day}\n\n"
-              "Запомните твари - а то забудете.")
-        await bot.send_sticker(chat_id=message.chat.id,sticker="CAACAgIAAxkBAAEHnE1j4UvyRWDHHA5GCZ93pLj2JT89pgACxQEAAnT4VBtdU0q5XgyfTy4E")
-    except Exception as ex:
-        await message.reply("Ты можешь хоть название своего города написать без ошибки? Запусти команду еще раз и напиши правильно плз")
-        await bot.send_sticker(chat_id=message.chat.id,
-                               sticker='CAACAgIAAxkBAAEHnEtj4Uu_fW47Jw5AehYHtRuBfi2cigACgAEAAnT4VBskuogiCHU7bi4E')
-
-@dp.message_handler(Text(equals="random_photo"))
-async def random_photo(message: types.Message):
-
-    await message.answer(text="Please choose button 'Random' ",
-                         reply_markup=kb)
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=text,
+        temperature=0.9,
+        max_tokens=2500,
+        top_p=1,
+        frequency_penalty=0.0,
+        presence_penalty=0.6,
+        stop="exx"
+    )
+    await message.answer(response['choices'][0]['text'])
 
 
-@dp.message_handler(Text(equals="Абдул черт"))
-async def abdulchert(message:types.Message):
-    await message.reply("Я знаю🥲")
+# обработчик команды /top
+@dp.message_handler(commands=['top'])
+async def cmd_top(message: types.Message):
+    chat_id = message.chat.id
 
-@dp.message_handler(Text(equals="Абылай черт"))
-async def abuchert(message:types.Message):
-    await message.reply("Согласен 💯!")
+    # находим все результаты для пользователей этой группы
+    group_results = results.find({'chat_id': chat_id}).sort('value', pymongo.DESCENDING)
 
+    if (count := results.count_documents({'chat_id': chat_id})) == 0:
+        await message.answer('Нет результатов для этой группы.')
+    else:
+        # формируем строку с результатами
+        result_str = '<b>------Топ игроков------</b>\n\n'
+        for i, result in enumerate(group_results):
+            user = await bot.get_chat_member(chat_id, result['user_id'])
+            result_str += f"{i+1}| {user.user.username} ➾ {result['value']}\n"
 
+        await message.answer(result_str,parse_mode='HTML')
 
-@dp.message_handler(Text(equals="Menu"))
-async def menu(message: types.Message):
-    await message.answer(text="Wellcome to main Menu",
-                         reply_markup=keyboard)
-    await message.delete()
+@dp.message_handler(commands=['top_10'])
+async def cmd_top_global(message: types.Message):
+    # находим все результаты из базы данных, сортируем по убыванию значения и берем первые 10
+    top_results = results.find().sort('value', pymongo.DESCENDING).limit(10)
 
-@dp.callback_query_handler()
-async def callbackall(callback: types.CallbackQuery):
-    global random_photo_lifehack
-    if callback.data == "like":
-        await callback.answer(text="You like it✨")
-    if callback.data == "Like":
-        await callback.answer(text="You like it✨")
-    if callback.data == "Dislike":
-        await callback.answer(text="You Dislike it ")
-    if callback.data == "Next":
-        await send_random(message=callback.message)
-    if callback.data == "price":
-        await callback.message.answer(text="Выберите в какие дни:",reply_markup=ink_medeu2)
-    if callback.data == "working_days":
-        await callback.answer("❤️")
-        await callback.message.answer(text="Выберите сеасн:", reply_markup=ink_session_workingDays)
-    if callback.data == "session1_workingDays":
-        await callback.answer("🤍")
-        await callback.message.answer(text="10:00 - 12:30:\n"
-                                      "Взрослый билет(23+) - 1000тг\n"
-                                      "Молодежный билет(14-22) - 600тг\n"
-                                      "Детский билет(7-13) - 500тг")
-    if callback.data == "session2_workingDays":
-        await callback.answer("💛")
-        await callback.message.answer(text="13:30 - 16:30:\n"
-                                           "Взрослый билет(23+) - 2000тг\n"
-                                            "Молодежный билет(14-22) - 1200тг\n"
-                                            "Детский билет(7-13) - 500тг",parse_mode="HTML")
-    if callback.data == "session3_workingDays":
-        await callback.answer("🤍")
-        await callback.message.answer(text="19:00 - 23:00:\n"
-                                           "Взрослый билет(23+) - 2500тг\n"
-                                            "Молодежный билет(14-22) - 1500тг\n"
-                                            "Детский билет(7-13) - 500тг")
-    if callback.data == "days off":
-        await callback.answer("🖤")
-        await callback.message.answer(text="Soon...")
-    if callback.data == "NextLifeHack":
-        random_photo_lifehack = random.choice(list(filter(lambda x: x != random_photo_lifehack,list(lifehack_photos.keys()))))
-        await callback.message.edit_media(types.InputMedia(media=random_photo_lifehack,type='photo',caption=lifehack_photos[random_photo_lifehack]),reply_markup=Nextink)
-@dp.message_handler()
-async def send_emoji(message: types.Message):
-    if message.text == "thx":
-        await message.reply("💗")
+    # формируем строку с результатами
+    result_str = '<b>----Глобальный TOP‒10----</b>\n\n'
+    for i, result in enumerate(top_results):
+        chat_name = (await bot.get_chat(result['chat_id'])).title
+        user = await bot.get_chat_member(result['chat_id'], result['user_id'])
+        result_str += f"{i+1}|  {user.user.username} ➾ {result['value']} см\n"
 
-async def show_all(products:list, message:types.Message) -> None:
-    global arr
-    s = "------Топ игроков------"
-    arr.append(s)
-    for product in products:
-        strr = str(product[0]) + " | " + str(product[2]) + " ➾ " + str(product[3]) + "см"
-        arr.append(strr)
+    await message.answer(result_str,parse_mode='HTML')
 
-    marr = arr.__str__().replace(',', '\n')
-    marr = marr.replace('------Топ игроков------', '------Топ игроков------\n')
-    marr = marr.replace('[', '')
-    marr = marr.replace(']', '')
-    marr = marr.replace("'", '')
-    await message.answer(marr)
-    arr.clear()
+@dp.message_handler(commands=['schedule'])
+async def Schedule(message: types.Message):
+    if message.chat.id == -1001531484283 or message.from_user.id == 1015079692:
+        # Создаем клавиатуру
+        keyboard = InlineKeyboardMarkup(row_width=2)
+        btn_rvt = InlineKeyboardButton("РВТ", callback_data="rvt")
+        btn_rsr = InlineKeyboardButton("РСР", callback_data="rsr")
+        btn_rpt = InlineKeyboardButton("РПТ", callback_data="rpt")
+        btn_rsb = InlineKeyboardButton("РСБ", callback_data="rsb")
+        keyboard.add(btn_rvt, btn_rsr, btn_rpt, btn_rsb)
+        await message.answer("Выберите день недели:", reply_markup=keyboard)
+    else:
+        await message.answer("У вас нет доступа к этой команде.")
+@dp.callback_query_handler(lambda c: c.data in ["rvt", "rsr", "rpt", "rsb"])
+async def process_callback_button(callback_query: types.CallbackQuery):
+    # Получаем текст кнопки
+    button_text = callback_query.data
 
-async def show_all_user(products:list, message:types.Message) -> None:
-    for product in products:
-        await message.answer(f"{product[2]}" + " ➾ " + f"<b>{product[3]}</b>" + "см\n", parse_mode='HTML')
+    # Отправляем соответствующий текст в ответ на callback_query
+    if button_text == "rvt":
+        await callback_query.message.answer("14:10 - 15:00 |	<i> _ENGLISH_ </i> | 205B\n14:10 - 15:00 |	<i> _ENGLISH_ </i> | 205B\n16:10 - 17:00 |	<i> _WEB_ </i> | 501M\n17:20 - 18:10 |	<i> _WEB_ </i> | 501M", parse_mode='HTML')
+    elif button_text == "rsr":
+        await callback_query.message.answer("13:10 - 14:00 | <i>  _WEB LC_ </i>| 801M\n14:10 - 15:00 | <i> _RUS_ </i> | 409B\n15:10 - 16:00 | <i> _RUS_ </i> | 409B", parse_mode='HTML')
+    elif button_text == "rpt":
+        await callback_query.message.answer("09:00 - 09:50 | <i> _ECT LC_ </i>| 906M \n10:00 - 10:50 | <i> _PC_ </i> | GYM \n11:00 - 11:50 | <i> _PC_ </i> | GYM", parse_mode='HTML')
+    elif button_text == "rsb":
+        await callback_query.message.answer(
+            "10:00 - 10:50 | <i> _ECT PR_ </i> | 210M\n11:00 - 11:50 | <i> _ECT PR_ </i> | 210M\n12:10 - 13:00	<i>-------CHILL-------</i>\n13:10 - 14:00 | <i> _CISCO_ </i> | 706M\n14:10 - 15:00 | <i> _CISCO_ </i> | 706M\n15:10 - 16:00 | <i> _CISCO_ </i> | 706M",parse_mode='HTML')
 
 
-async def show_count(products: list, message: types.Message):
-    for product in products:
-        await bot.send_message(chat_id=message.chat.id,text=f"{product[2]}")
-
-if __name__ == "__main__" :
-
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
-
-
+        # запускаем бота
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
